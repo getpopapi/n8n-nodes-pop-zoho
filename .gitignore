@@ -1,0 +1,19 @@
+node_modules
+dist
+*.js.map
+
+# IDE
+.idea/
+
+# root SVG source (copied to nodes/ at build time)
+POP_n8n.svg
+
+# payload test files (root only — examples/ folder is tracked)
+/payload.json
+/payload-credit-note.json
+/payload-new-contact.json
+/payload-tax-not-found.json
+
+# spec
+zoho-invoice-n8n-connector-spec.md
+

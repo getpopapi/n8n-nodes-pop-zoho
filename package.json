@@ -1,0 +1,50 @@
+{
+  "name": "n8n-nodes-pop-zoho",
+  "version": "0.1.0",
+  "description": "n8n custom node — maps POP API payload to Zoho Invoice / Zoho Books",
+  "keywords": [
+    "n8n-community-node-package",
+    "zoho",
+    "e-invoicing",
+    "peppol",
+    "uae"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "author": {
+    "name": "POP API"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js",
+  "scripts": {
+    "build": "n8n-node build",
+    "dev": "n8n-node dev",
+    "lint": "n8n-node lint",
+    "lint:fix": "n8n-node lint --fix",
+    "release": "n8n-node release"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "strict": true,
+    "credentials": [
+      "dist/credentials/ZohoInvoiceOAuth2Api.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@n8n/node-cli": "0.27.0",
+    "n8n-workflow": "^2.13.1",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

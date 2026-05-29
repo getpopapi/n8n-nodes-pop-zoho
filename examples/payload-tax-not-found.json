@@ -1,0 +1,100 @@
+{
+  "integration": {
+    "use": "n8n-zoho",
+    "id": "popWh_piwye0sh"
+  },
+  "environment": "live",
+  "data": {
+    "type": "invoice",
+    "vies": false,
+    "nature": "N1",
+    "ref_normative": "Art. 7-ter DPR 633/72",
+    "invoice_body": {
+      "general_data": {
+        "doc_type": "TD01",
+        "date": "2025-05-28",
+        "invoice_number": "2025/TEST-TAX",
+        "currency": "EUR"
+      }
+    },
+    "transfer_lender": {
+      "personal_data": {
+        "company_name": "La Mia Azienda Srl",
+        "first_name": "",
+        "last_name": "",
+        "tax_id_vat": {
+          "id_code": "IT09876543210",
+          "country_id": "IT",
+          "tax_regime": "RF01"
+        },
+        "tax_id_code": "RSSMRA80A01H501Z"
+      },
+      "place": {
+        "address": "Via Verdi 10",
+        "city": "Roma",
+        "zip_code": "00100",
+        "province_id": "RM",
+        "country_id": "IT"
+      },
+      "contact": {
+        "phone": "+39 06 12345678",
+        "email": "info@lamiazienda.it"
+      }
+    },
+    "transferee_client": {
+      "personal_data": {
+        "company_name": "Acme Srl",
+        "first_name": "",
+        "last_name": "",
+        "email": "acme@example.com",
+        "tax_id_vat": {
+          "id_code": "IT12345678901",
+          "country_id": "IT"
+        },
+        "tax_id_code": "CMCMRC70A01F205X"
+      },
+      "place": {
+        "address": "Via Roma 1",
+        "city": "Milano",
+        "zip_code": "20100",
+        "province_id": "MI",
+        "country_id": "IT"
+      }
+    },
+    "order_items": [
+      {
+        "description": "Service with unknown tax rate",
+        "quantity": "1",
+        "unit_price": "200.00",
+        "rate": "15.00",
+        "total_price": "200.00",
+        "total_tax": "30.00",
+        "item_code": {
+          "type": "INTERNAL",
+          "value": "SKU-TAX-TEST"
+        },
+        "unit": "pz",
+        "discount_type": "",
+        "discount_percent": "0.00",
+        "discount_amount": "0.00",
+        "nature": ""
+      }
+    ],
+    "payment_data": {
+      "terms_payment": "TP02",
+      "payment_details": "MP05",
+      "payment_amount": "230.00",
+      "iban": "",
+      "beneficiary": "",
+      "financial_institution": ""
+    },
+    "purchase_order_data": {
+      "id": "",
+      "date": ""
+    },
+    "connected_invoice_data": {
+      "id": "",
+      "date": ""
+    }
+  }
+}

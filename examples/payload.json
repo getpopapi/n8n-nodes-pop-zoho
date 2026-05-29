@@ -1,0 +1,139 @@
+{
+  "integration": {
+    "use": "n8n-zoho",
+    "id": "popWh_piwye0sh"
+  },
+  "environment": "sandbox",
+  "data": {
+    "id": 1001,
+    "filename": "INV-2026-0001",
+    "type": "invoice",
+    "version": "FPR12",
+    "sdi_type": "ABC1234",
+    "customer_type": "company",
+    "nature": "",
+    "ref_normative": "",
+    "n4_ref_normative": "",
+    "vies": false,
+    "vat_kind": "I",
+    "order_provider": "",
+    "view": false,
+    "xml_style": "",
+    "transmitter_data": {
+      "transmitter_id": {
+        "country_id": "IT",
+        "id_code": "01879020517"
+      },
+      "progressive": "00001",
+      "transmitter_format": "FPR12",
+      "sdi_code": "ABC1234",
+      "transmitter_contact": {
+        "phone": "+39061234567",
+        "email": "amministrazione@example.com"
+      },
+      "recipient_pec": ""
+    },
+    "transfer_lender": {
+      "personal_data": {
+        "tax_id_vat": {
+          "country_id": "IT",
+          "id_code": "01879020517",
+          "tax_regime": ""
+        },
+        "tax_id_code": "",
+        "company_name": "POP Demo SRL",
+        "first_name": "",
+        "last_name": "",
+        "email": ""
+      },
+      "place": {
+        "address": "Via Roma 1",
+        "zip_code": "00100",
+        "city": "Roma",
+        "province_id": "RM",
+        "country_id": "IT"
+      },
+      "rea_registration": {
+        "office": "",
+        "number": "",
+        "liquidation_status": ""
+      },
+      "contact": {
+        "phone": "+39061234567",
+        "email": "amministrazione@example.com"
+      }
+    },
+    "transferee_client": {
+      "personal_data": {
+        "tax_id_vat": {
+          "country_id": "IT",
+          "id_code": "12345678901"
+        },
+        "tax_id_code": "RSSMRA80A01H501U",
+        "company_name": "Cliente Test SRL",
+        "first_name": "Mario",
+        "last_name": "Rossi",
+        "email": "cliente@example.com"
+      },
+      "place": {
+        "address": "Via Milano 10",
+        "zip_code": "20100",
+        "city": "Milano",
+        "province_id": "MI",
+        "country_id": "IT"
+      }
+    },
+    "invoice_body": {
+      "general_data": {
+        "doc_type": "TD01",
+        "currency": "EUR",
+        "date": "2026-03-04",
+        "invoice_number": "2026/0001"
+      },
+      "provident_fund": {
+        "amount_contribution_fund": ""
+      },
+      "total_document_amount": "122.00"
+    },
+    "purchase_order_data": {
+      "id": "#1001",
+      "date": "2026-03-04"
+    },
+    "connected_invoice_data": {
+      "id": "",
+      "date": ""
+    },
+    "order_items": [
+      {
+        "item_code": {
+          "type": "SKU",
+          "value": "PROD-001"
+        },
+        "item_type": "product",
+        "description": "Servizio consulenza",
+        "quantity": "1.00",
+        "unit": "N.",
+        "gift_product": "no",
+        "discount_type": "",
+        "discount_percent": "",
+        "discount_amount": "",
+        "unit_price": "100.00",
+        "total_price": "100.00",
+        "rate": "22.00",
+        "total_tax": "22.00"
+      }
+    ],
+    "payment_data": {
+      "terms_payment": "TP02",
+      "payment_amount": "122.00",
+      "payment_details": "MP05",
+      "beneficiary": "POP Demo SRL",
+      "financial_institution": "Demo Bank",
+      "iban": "IT60X0542811101000000123456"
+    },
+    "overrides": {
+      "bollo_force_apply": false,
+      "language": "IT"
+    }
+  }
+}
