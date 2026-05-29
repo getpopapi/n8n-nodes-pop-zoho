@@ -853,8 +853,9 @@ export class PopZohoInvoice implements INodeType {
 				returnData.push({
 					json: {
 						success:       true,
+						status_code:   200,
+						message:       'Dry run: payload validated and mapped successfully. No Zoho API call was made.',
 						dry_run:       true,
-						validation:    'passed',
 						zoho_endpoint: `POST /${endpoint}`,
 						zoho_body:     zohoBody,
 					},
@@ -880,12 +881,15 @@ export class PopZohoInvoice implements INodeType {
 
 				const response = await zohoPost(this, apiBase!, orgHeaderKey!, orgId!, endpoint, zohoBody, i);
 				const doc      = (response.invoice ?? response.creditnote ?? {}) as IDataObject;
+				const docType2 = docType === 'TD04' ? 'creditnote' : 'invoice';
 
 				returnData.push({
 					json: {
 						success:             true,
+						status_code:         200,
+						message:             `${docType2 === 'creditnote' ? 'Credit note' : 'Invoice'} created successfully in Zoho.`,
 						zoho_product:        product,
-						zoho_document_type:  docType === 'TD04' ? 'creditnote' : 'invoice',
+						zoho_document_type:  docType2,
 						zoho_invoice_id:     (doc.invoice_id     as string) || (doc.creditnote_id     as string) || null,
 						zoho_invoice_number: (doc.invoice_number as string) || (doc.creditnote_number as string) || null,
 						zoho_status:         doc.status ?? null,

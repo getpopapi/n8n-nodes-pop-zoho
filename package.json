@@ -10,17 +10,18 @@
     "uae"
   ],
   "license": "MIT",
-  "homepage": "",
+  "homepage": "https://github.com/getpopapi/n8n-nodes-pop-zoho",
   "author": {
     "name": "POP API"
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/getpopapi/n8n-nodes-pop-zoho.git"
   },
   "main": "dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js",
   "scripts": {
     "build": "n8n-node build",
+    "postbuild": "cp dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js ~/.n8n/custom/PopZohoInvoice.node.js",
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
