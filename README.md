@@ -22,7 +22,12 @@ Supported document types:
 - [Credentials Setup](#credentials-setup)
 - [Workflow Setup](#workflow-setup)
 - [Node Parameters](#node-parameters)
-- [Calling the Connector via POP API](#calling-the-connector-via-pop-api)
+- [Trigger Paths](#trigger-paths)
+- [Consumer Guides](#consumer-guides)
+  - [WooCommerce](#woocommerce)
+  - [Shopify](#shopify)
+  - [Direct API / Postman](#direct-api--postman)
+  - [LLM / MCP Agents](#llm--mcp-agents)
 - [Security Model](#security-model)
 - [Error Codes](#error-codes)
 - [Sandbox / Dry Run Mode](#sandbox--dry-run-mode)
@@ -43,6 +48,10 @@ POP API ──► Webhook node ──► POP → Zoho ──► Respond to Webho
 ```
 
 POP API handles the entry point (license validation, sandbox/live mode, quota billing). This node owns: signature verification, payload mapping, contact resolution, tax lookup, and Zoho API calls.
+
+The connector can be triggered in two ways (see [Trigger Paths](#trigger-paths)):
+- **Via webhook panel** — used by WooCommerce, Shopify, and any platform that calls a document-generation route
+- **Via direct `/connector/zoho` route** — used for Postman, direct API calls, and LLM/MCP agents
 
 ---
 
@@ -146,7 +155,7 @@ Click **Connect** to complete the OAuth2 authorization flow. Zoho will ask you t
 [Respond to Webhook node]
 ```
 
-1. **Webhook node** — set **Authentication** to `None` (security is handled by the POP → Zoho node via HMAC + RSA JWT). Set **Respond** to `Using 'Respond to Webhook' Node`.
+1. **Webhook node** — set **Authentication** to `None` (security is handled by the POP → Zoho node via HMAC + RSA JWT). Set **Respond** to `Using 'Respond to Webhook' Node`. Set the path to `webhook/zoho`.
 2. **POP → Zoho node** — configure as described below.
 3. **Respond to Webhook node** — leave default settings; it will forward the node output as the HTTP response.
 
@@ -155,6 +164,8 @@ Click **Connect** to complete the OAuth2 authorization flow. Zoho will ask you t
 ### Register the Webhook URL in POP API
 
 Copy the **Production URL** from the Webhook node (e.g. `https://your-n8n.example.com/webhook/zoho`) and paste it into your POP API account → **Webhooks** panel. Note the **webhook ID** (e.g. `popWh_xxxxxxxx`) — you will need it in every API call.
+
+> **Webhook path naming:** Use `webhook/zoho` as the path in the n8n Webhook node. The node supports both Zoho Invoice and Zoho Books, so a product-neutral path avoids confusion and matches the connector slug used by POP API.
 
 ![](.github/images/webhook-panel.png)
 
@@ -167,10 +178,12 @@ Copy the **Production URL** from the Webhook node (e.g. `https://your-n8n.exampl
 | Parameter | Description |
 |-----------|-------------|
 | **POP API URL** | Base URL of your POP API instance (default: `https://popapi.io`). Used to auto-fetch the RSA public key. |
-| **POP API License Key** | Your POP API license key. Used to verify the HMAC signature on every incoming request. |
+| **POP API License Key** | Your **default** POP API license key. Used to verify the HMAC signature on every incoming request. |
 | **POP API RSA Public Key** | Click the **Refresh** button to auto-fetch the public key from your POP API instance. Required for RSA JWT verification. |
 
 ![](.github/images/security.png)
+
+> **Which license key to use:** Always use the **default API key** — found in your POP API account at **popapi.io → Account → API → API Key (default)**. Do not use platform-specific keys (e.g. the key generated for a Shopify or WooCommerce integration). POP API always signs connector requests with the default key regardless of which platform triggered the call, so the node must verify against that same key.
 
 > **How to get the RSA Public Key:** Set the **POP API URL** field, then click the refresh icon (🔄) next to **POP API RSA Public Key**. The key is fetched automatically from your POP API instance. You only need to do this once per credential setup (or after a key rotation on the POP API server).
 
@@ -193,22 +206,49 @@ Copy the **Production URL** from the Webhook node (e.g. `https://your-n8n.exampl
 
 ---
 
-## Calling the Connector via POP API
+## Trigger Paths
 
-All requests must go through POP API — never call the n8n webhook directly from your application. POP API validates your license, injects the security tokens, and handles billing.
+The connector can be triggered in two distinct ways depending on the client.
 
-### Request
+### Path A — Via Webhook Panel (WooCommerce, Shopify, any platform using document-generation routes)
 
+The client calls one of POP API's document-generation routes (`create-xml`, `create-ubl`, `create-ksef-xml`) with a `webhook` integration. POP API looks up the webhook entry, sees that `connector_type: zoho` is set, and automatically routes the call through the connector.
+
+**Setup steps:**
+1. Register the n8n webhook URL in the POP API **Webhooks** panel
+2. Set the **Connector** field on that webhook entry to **n8n Connector — Zoho**
+3. In your API call, pass `integration.use: "webhook"` and `integration.id: "<webhook-id>"`
+
+**Request example:**
+```json
+{
+  "integration": {
+    "use": "webhook",
+    "id": "<webhook-id>"
+  },
+  "environment": "sandbox",
+  "data": { ... }
+}
+```
+
+This path is used automatically by the WooCommerce and Shopify integrations — no extra configuration is needed on the client side once the webhook panel is set up.
+
+---
+
+### Path B — Direct `/connector/zoho` Route (Postman, API, LLM/MCP)
+
+The client calls POP API's dedicated connector endpoint directly. The webhook entry still needs to exist (to store the n8n URL), but the routing is explicit.
+
+**Request:**
 ```
 POST https://popapi.io/wp-json/api/v2/connector/zoho
 
 Headers:
   Content-Type: application/json
-  X-Api-Key: <your-license-key>
+  X-Api-Key: <your-default-license-key>
 ```
 
-### Body
-
+**Body:**
 ```json
 {
   "integration": {
@@ -272,7 +312,7 @@ Headers:
 | `environment` | `sandbox` / `live` | `sandbox` runs a dry-run — no Zoho calls, no quota deducted |
 | `data.invoice_body.general_data.doc_type` | `TD01` / `TD04` | Document type: `TD01` = invoice, `TD04` = credit note |
 
-For `TD04` credit notes, include `connected_invoice_data.id` with the Zoho invoice ID of the document being reversed.
+For `TD04` credit notes, include `connected_invoice_data.id` with the Zoho invoice ID of the original document being reversed (returned as `zoho_invoice_id` in the invoice creation response).
 
 ### Successful Response
 
@@ -281,6 +321,8 @@ For `TD04` credit notes, include `connected_invoice_data.id` with the Zoho invoi
   "success": true,
   "environment": "live",
   "connector": "zoho",
+  "message": "Invoice created successfully.",
+  "status_code": 200,
   "data": {
     "success": true,
     "zoho_product": "books",
@@ -297,17 +339,67 @@ For `TD04` credit notes, include `connected_invoice_data.id` with the Zoho invoi
 
 ---
 
+## Consumer Guides
+
+### WooCommerce
+
+1. In your POP API account → **Webhooks** panel, add the n8n webhook URL and set the **Connector** field to **n8n Connector — Zoho**.
+2. In your WooCommerce numeration settings, select the webhook entry you just created.
+3. When an order is processed, POP API automatically calls the connector — no changes needed in WooCommerce.
+4. The connector is triggered both during **AJAX** (immediate) and **scheduled cron** flows.
+
+> The license key configured in the WooCommerce plugin is the standard POP API key. POP API always signs with the **default** key, so the n8n credential must use that same key.
+
+---
+
+### Shopify
+
+1. Register the n8n webhook URL in the POP API webhook panel and set **Connector** to **n8n Connector — Zoho**.
+2. In the Shopify app, select that webhook entry in the numeration settings for the relevant document type.
+3. When the Shopify app generates a document, POP API routes the call through the connector automatically.
+
+> The Shopify integration uses a platform-specific license key internally, but POP API always signs connector requests with the **default** key. Make sure the `POP API License Key` credential in n8n is the **default API key** from popapi.io → Account → API → API Key (default), not the Shopify-specific key — using the wrong key causes an `auth_error` (HMAC mismatch).
+
+---
+
+### Direct API / Postman
+
+Use [Path B](#path-b--direct-connectorzohо-route-postman-api-llmmcp) above. Send the request to `/wp-json/api/v2/connector/zoho` with the `X-Api-Key` header set to your default license key.
+
+A Postman collection with ready-to-use examples (sandbox and live) is available in the `examples/` directory of this repository.
+
+---
+
+### LLM / MCP Agents
+
+The connector is fully usable from LLM agents and MCP-based tools. Use [Path B](#path-b--direct-connectorzohо-route-postman-api-llmmcp) (direct `/connector/zoho` route).
+
+Minimal call sequence for an agent:
+1. Retrieve the webhook ID from the user's POP API account (or have it pre-configured)
+2. Build the `data` object from the order information available to the agent
+3. POST to `/wp-json/api/v2/connector/zoho` with `environment: "sandbox"` first to verify mapping
+4. On success, repeat with `environment: "live"` to create the real document in Zoho
+
+> Use `environment: "sandbox"` for all test or uncertain calls — no quota is consumed and no document is created in Zoho.
+
+---
+
 ## Security Model
 
 Every request from POP API to the n8n connector is protected by two independent verification layers:
 
 ### 1. HMAC-SHA256 (license key binding)
-POP API computes `HMAC-SHA256(body + timestamp, license_key)` and sends it in the `X-POP-Signature` header. The node verifies the signature using the license key configured in the node parameters. This proves the payload belongs to the customer who owns that license key.
+POP API computes `HMAC-SHA256(body + timestamp, default_license_key)` and sends it in the `X-POP-Signature` header. The node verifies the signature using the **default** license key configured in the node parameters. This proves the payload belongs to the customer who owns that account.
+
+POP API always uses the **default** license key for signing, regardless of which platform (WooCommerce, Shopify, direct API, LLM) triggered the request. Configuring a platform-specific key in the node will cause all requests to fail with `auth_error`.
 
 ### 2. RSA JWT (POP API origin proof)
 POP API signs a short-lived JWT (5 min TTL) with its RSA-2048 private key and injects it as `_pop_jwt` in the payload. The node verifies the JWT using the public key fetched from your POP API instance. This proves the request originated from POP API servers — a stolen license key alone is not enough to forge requests.
 
 Both checks are **always mandatory** and cannot be disabled.
+
+### Replay Protection
+Requests older than 5 minutes are automatically rejected based on the `X-POP-Timestamp` header.
 
 ---
 
@@ -315,7 +407,7 @@ Both checks are **always mandatory** and cannot be disabled.
 
 | Code | Cause | Fix |
 |------|-------|-----|
-| `auth_error` | Invalid HMAC signature, expired JWT, or missing security headers | Ensure requests always go through POP API — never call n8n directly |
+| `auth_error` | Invalid HMAC signature, expired JWT, or missing security headers | Make sure the `POP API License Key` in the node is the **default** key from popapi.io → Account → API → API Key (default). Platform-specific keys (Shopify, WooCommerce) will not match. Also ensure requests always go through POP API — never call n8n directly. |
 | `config_error` | License Key or RSA Public Key not set in node parameters | Configure the node parameters and refresh the public key |
 | `validation_error` | Required POP field missing in the payload | Check that `data.invoice_body.general_data.*`, `data.transferee_client.*`, and `data.order_items` are all present |
 | `unsupported_doc_type` | `doc_type` is not `TD01` or `TD04` | Only `TD01` (invoice) and `TD04` (credit note) are supported in v1 |
@@ -331,10 +423,10 @@ Both checks are **always mandatory** and cannot be disabled.
 
 Two independent mechanisms to avoid creating real documents during testing:
 
-- **`environment: "sandbox"`** in the POP API request body — POP API injects `_pop_dry_run: true` into the payload (HMAC-signed, cannot be spoofed). No quota is deducted.
+- **`environment: "sandbox"`** in the POP API request body — POP API injects `_pop_dry_run: true` into the payload (HMAC-signed, cannot be spoofed). No quota is deducted. Use this for end-to-end testing from any consumer (WooCommerce, Shopify, Postman, LLM).
 - **Dry Run** parameter on the node — skips Zoho API calls regardless of the `_pop_dry_run` flag. Useful for local development without Zoho credentials.
 
-When dry run is active, the response includes `dry_run: true` and the full `zoho_body` that would have been sent to Zoho, allowing you to verify the field mapping.
+When dry run is active, the response includes `dry_run: true` and the full `zoho_body` that would have been sent to Zoho, allowing you to verify the field mapping before going live.
 
 ---
 
