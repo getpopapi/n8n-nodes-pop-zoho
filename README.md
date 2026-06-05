@@ -489,4 +489,4 @@ MIT — see [LICENSE](LICENSE.md)
 ## Related
 
 - [n8n-nodes-pop](https://github.com/getpopapi/n8n-nodes-pop) — POP API node for n8n (FatturaPA, Peppol, VAT validation)
-- [POP API Documentation](https://www.postman.com/pop-cloud/pop-cloud-api/overview)
+- [POP API Documentation](https://www.postman.com/getpopapi/pop-api-public-docs)
