@@ -21,7 +21,7 @@
   "main": "dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js",
   "scripts": {
     "build": "n8n-node build",
-    "postbuild": "cp dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js ~/.n8n/custom/PopZohoInvoice.node.js",
+    "postbuild": "ln -sf $(pwd)/dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js ~/.n8n/custom/PopZohoInvoice.node.js && ln -sf $(pwd)/dist/credentials/ZohoInvoiceOAuth2Api.credentials.js ~/.n8n/custom/ZohoInvoiceOAuth2Api.credentials.js && ln -sf $(pwd)/dist/nodes/PopZohoInvoice/pop-zoho-invoice.svg ~/.n8n/custom/pop-zoho-invoice.svg",
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
