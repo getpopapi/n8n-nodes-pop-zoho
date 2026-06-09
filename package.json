@@ -1,5 +1,5 @@
 {
-  "name": "n8n-nodes-pop-zoho",
+  "name": "@getpopapi/n8n-nodes-pop-zoho",
   "version": "0.1.0",
   "description": "n8n custom node — maps POP API payload to Zoho Invoice / Zoho Books",
   "keywords": [
@@ -12,7 +12,8 @@
   "license": "MIT",
   "homepage": "https://github.com/getpopapi/n8n-nodes-pop-zoho",
   "author": {
-    "name": "POP API"
+    "name": "Babini Mazzari S.r.l.",
+    "email": "lucas@babinimazzari.com"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,7 @@
   "main": "dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js",
   "scripts": {
     "build": "n8n-node build",
-    "postbuild": "ln -sf $(pwd)/dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js ~/.n8n/custom/PopZohoInvoice.node.js && ln -sf $(pwd)/dist/credentials/ZohoInvoiceOAuth2Api.credentials.js ~/.n8n/custom/ZohoInvoiceOAuth2Api.credentials.js && ln -sf $(pwd)/dist/nodes/PopZohoInvoice/pop-zoho-invoice.svg ~/.n8n/custom/pop-zoho-invoice.svg",
+    "postbuild": "if [ -d \"$HOME/.n8n/custom\" ]; then ln -sf $(pwd)/dist/nodes/PopZohoInvoice/PopZohoInvoice.node.js $HOME/.n8n/custom/PopZohoInvoice.node.js && ln -sf $(pwd)/dist/credentials/ZohoInvoiceOAuth2Api.credentials.js $HOME/.n8n/custom/ZohoInvoiceOAuth2Api.credentials.js && ln -sf $(pwd)/dist/nodes/PopZohoInvoice/pop-zoho-invoice.svg $HOME/.n8n/custom/pop-zoho-invoice.svg; fi",
     "dev": "n8n-node dev",
     "lint": "n8n-node lint",
     "lint:fix": "n8n-node lint --fix",
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@n8n/node-cli": "0.27.0",
+    "eslint": "9.32.0",
     "n8n-workflow": "^2.13.1",
     "typescript": "^5.0.0"
   },

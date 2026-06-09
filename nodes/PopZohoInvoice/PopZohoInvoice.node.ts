@@ -7,9 +7,9 @@ import type {
 	INodeType,
 	INodeTypeDescription,
 	IDataObject,
-	IRequestOptions,
+	IHttpRequestOptions,
 } from 'n8n-workflow';
-import { NodeOperationError } from 'n8n-workflow';
+import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 import { ZOHO_URLS, ZOHO_ORG_HEADER } from '../../credentials/ZohoInvoiceOAuth2Api.credentials';
 
 // ---------------------------------------------------------------------------
@@ -126,10 +126,9 @@ async function zohoGet(
 	orgHeaderKey: string,
 	orgId: string,
 	path: string,
-	itemIndex: number,
 ): Promise<IDataObject> {
 	const separator = path.includes('?') ? '&' : '?';
-	const options: IRequestOptions = {
+	const options: IHttpRequestOptions = {
 		method: 'GET',
 		url: `${apiBase}/${path}${separator}organization_id=${orgId}`,
 		headers: { [orgHeaderKey]: orgId },
@@ -145,10 +144,9 @@ async function zohoPost(
 	orgId: string,
 	path: string,
 	body: IDataObject,
-	itemIndex: number,
 ): Promise<IDataObject> {
 	const separator = path.includes('?') ? '&' : '?';
-	const options: IRequestOptions = {
+	const options: IHttpRequestOptions = {
 		method: 'POST',
 		url: `${apiBase}/${path}${separator}organization_id=${orgId}`,
 		headers: { [orgHeaderKey]: orgId },
@@ -295,11 +293,10 @@ async function buildTaxMap(
 	orgHeaderKey: string,
 	orgId: string,
 	product: string,
-	itemIndex: number,
 ): Promise<Map<string, string>> {
 	// Zoho Invoice uses /taxes; Zoho Books uses /settings/taxes
 	const taxPath = product === 'books' ? 'settings/taxes' : 'taxes';
-	const response = await zohoGet(context, apiBase, orgHeaderKey, orgId, taxPath, itemIndex);
+	const response = await zohoGet(context, apiBase, orgHeaderKey, orgId, taxPath);
 	const taxes = (response.taxes ?? []) as ZohoTax[];
 	const map = new Map<string, string>();
 
@@ -357,7 +354,6 @@ async function searchContacts(
 	orgHeaderKey: string,
 	orgId: string,
 	searchText: string,
-	itemIndex: number,
 ): Promise<ZohoContact[]> {
 	const response = await zohoGet(
 		context,
@@ -365,7 +361,6 @@ async function searchContacts(
 		orgHeaderKey,
 		orgId,
 		`contacts?search_text=${encodeURIComponent(searchText)}`,
-		itemIndex,
 	);
 	return (response.contacts ?? []) as ZohoContact[];
 }
@@ -393,7 +388,7 @@ async function resolveContact(
 
 	// 1. Search by VAT / TRN (only when strategy includes VAT lookup)
 	if (matchStrategy === 'vat_email_name' && vatCode) {
-		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, vatCode, itemIndex);
+		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, vatCode);
 		if (results.length === 1) return { contactId: results[0].contact_id, contactCreated: false };
 		if (results.length > 1) {
 			throw new NodeOperationError(
@@ -406,7 +401,7 @@ async function resolveContact(
 
 	// 2. Search by email
 	if (email) {
-		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, email, itemIndex);
+		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, email);
 		if (results.length === 1) return { contactId: results[0].contact_id, contactCreated: false };
 		if (results.length > 1) {
 			throw new NodeOperationError(
@@ -419,7 +414,7 @@ async function resolveContact(
 
 	// 3. Search by name
 	if (contactName) {
-		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, contactName, itemIndex);
+		const results = await searchContacts(context, apiBase, orgHeaderKey, orgId, contactName);
 		if (results.length === 1) return { contactId: results[0].contact_id, contactCreated: false };
 		if (results.length > 1) {
 			throw new NodeOperationError(
@@ -468,7 +463,7 @@ async function resolveContact(
 		contactBody.vat_treatment = vatTreatment;
 	}
 
-	const created    = await zohoPost(context, apiBase, orgHeaderKey, orgId, 'contacts', contactBody, itemIndex);
+	const created    = await zohoPost(context, apiBase, orgHeaderKey, orgId, 'contacts', contactBody);
 	const newContact = created.contact as ZohoContact;
 
 	if (!newContact?.contact_id) {
@@ -592,8 +587,8 @@ export class PopZohoInvoice implements INodeType {
 		version: 1,
 		description: 'Connect POP Cloud API (v2) payloads to Zoho Invoice / Zoho Books',
 		defaults: { name: 'POP → Zoho' },
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'zohoInvoiceOAuth2Api',
@@ -606,7 +601,7 @@ export class PopZohoInvoice implements INodeType {
 				name: 'popApiUrl',
 				type: 'string',
 				default: 'https://popapi.io',
-				description: 'Base URL of your POP API instance (no trailing slash).',
+				description: 'Base URL of your POP API instance (no trailing slash)',
 				placeholder: 'https://popapi.io',
 			},
 			{
@@ -619,7 +614,7 @@ export class PopZohoInvoice implements INodeType {
 				placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
 			},
 			{
-				displayName: 'POP API RSA Public Key',
+				displayName: 'POP API RSA Public Key Name or ID',
 				name: 'popPublicKey',
 				type: 'options',
 				typeOptions: {
@@ -627,15 +622,15 @@ export class PopZohoInvoice implements INodeType {
 					loadOptionsDependsOn: ['popApiUrl'],
 				},
 				default: '',
-				description: 'Click the refresh button to fetch the RSA public key automatically from your POP API instance.',
+				description: 'Click the refresh button to fetch the RSA public key automatically from your POP API instance. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 			},
 			{
-				displayName: 'Dry Run (no Zoho calls)',
+				displayName: 'Dry Run (No Zoho Calls)',
 				name: 'dryRun',
 				type: 'boolean',
 				default: false,
 				description:
-					'When enabled: validates the POP payload and returns the Zoho body that would be sent, without making any API call. Use for testing mapping without Zoho credentials.',
+					'Whether to validate the POP payload and return the mapped Zoho body without making any API call. Use for testing mapping without Zoho credentials.',
 			},
 			{
 				displayName: 'Contact Match Strategy',
@@ -643,14 +638,14 @@ export class PopZohoInvoice implements INodeType {
 				type: 'options',
 				options: [
 					{
-						name: 'VAT → Email → Name',
-						value: 'vat_email_name',
-						description: 'Search by VAT/TRN first, then email, then company/person name',
-					},
-					{
 						name: 'Email → Name',
 						value: 'email_name',
 						description: 'Skip VAT lookup — search by email, then name',
+					},
+					{
+						name: 'VAT → Email → Name',
+						value: 'vat_email_name',
+						description: 'Search by VAT/TRN first, then email, then company/person name',
 					},
 				],
 				default: 'vat_email_name',
@@ -687,15 +682,15 @@ export class PopZohoInvoice implements INodeType {
 				name: 'placeOfSupply',
 				type: 'options',
 				options: [
-					{ name: 'Not specified',             value: '' },
-					{ name: 'Dubai (AE-DU)',             value: 'AE-DU' },
 					{ name: 'Abu Dhabi (AE-AZ)',         value: 'AE-AZ' },
-					{ name: 'Sharjah (AE-SH)',           value: 'AE-SH' },
 					{ name: 'Ajman (AE-AJ)',             value: 'AE-AJ' },
-					{ name: 'Umm Al Quwain (AE-UQ)',     value: 'AE-UQ' },
-					{ name: 'Ras Al Khaimah (AE-RK)',    value: 'AE-RK' },
+					{ name: 'Dubai (AE-DU)',             value: 'AE-DU' },
 					{ name: 'Fujairah (AE-FU)',          value: 'AE-FU' },
-					{ name: 'Other (enter code)',        value: 'other' },
+					{ name: 'Not Specified',             value: '' },
+					{ name: 'Other (Enter Code)',        value: 'other' },
+					{ name: 'Ras Al Khaimah (AE-RK)',    value: 'AE-RK' },
+					{ name: 'Sharjah (AE-SH)',           value: 'AE-SH' },
+					{ name: 'Umm Al Quwain (AE-UQ)',     value: 'AE-UQ' },
 				],
 				default: '',
 				description: 'Place of supply for e-invoicing (e.g. UAE emirates). Leave as "Not specified" if not required.',
@@ -707,10 +702,10 @@ export class PopZohoInvoice implements INodeType {
 				default: '',
 				displayOptions: { show: { placeOfSupply: ['other'] } },
 				placeholder: 'e.g. IN-KA',
-				description: 'Enter the place of supply code manually.',
+				description: 'Enter the place of supply code manually',
 			},
 			{
-				displayName: 'Deferred Payment Terms (days)',
+				displayName: 'Deferred Payment Terms (Days)',
 				name: 'defaultPaymentTermsDays',
 				type: 'number',
 				default: 30,
@@ -718,6 +713,7 @@ export class PopZohoInvoice implements INodeType {
 					'Number of days granted for payment when the payload specifies deferred payment (e.g. bank transfer net 30). Not applied for immediate payments.',
 			},
 		],
+		usableAsTool: true,
 	};
 
 	methods = {
@@ -735,7 +731,7 @@ export class PopZohoInvoice implements INodeType {
 				const publicKey = (response as IDataObject)?.public_key as string;
 				if (!publicKey) return [];
 
-				return [{ name: 'POP API Public Key (auto-fetched)', value: publicKey }];
+				return [{ name: 'POP API Public Key (Auto-Fetched)', value: publicKey }];
 			},
 		},
 	};
@@ -815,90 +811,102 @@ export class PopZohoInvoice implements INodeType {
 				);
 			}
 
-			taxMap = await buildTaxMap(this, apiBase, orgHeaderKey, orgId, product, 0);
+			taxMap = await buildTaxMap(this, apiBase, orgHeaderKey, orgId, product);
 		}
 
 		// 4. Process each item
 		for (let i = 0; i < items.length; i++) {
-			const raw        = items[i].json as IDataObject;
-			const popPayload = (raw.body ? raw.body : raw) as PopPayload;
-			const isDryRun   = itemModes[i];
+			try {
+				const raw        = items[i].json as IDataObject;
+				const popPayload = (raw.body ? raw.body : raw) as PopPayload;
+				const isDryRun   = itemModes[i];
 
-			validatePopPayload(popPayload, i, this);
+				validatePopPayload(popPayload, i, this);
 
-			const docType  = popPayload.data!.invoice_body!.general_data!.doc_type!;
-			const endpoint = docType === 'TD04' ? 'creditnotes' : 'invoices';
+				const docType  = popPayload.data!.invoice_body!.general_data!.doc_type!;
+				const endpoint = docType === 'TD04' ? 'creditnotes' : 'invoices';
 
-			if (isDryRun) {
-				const dryTaxMap = new Map<string, string>();
-				for (const item of popPayload.data?.order_items ?? []) {
-					const normalized = parseFloat(item.rate || '0').toFixed(2);
-					if (normalized !== '0.00') {
-						dryTaxMap.set(normalized, `DRY_RUN_TAX_ID_${normalized}pct`);
+				if (isDryRun) {
+					const dryTaxMap = new Map<string, string>();
+					for (const item of popPayload.data?.order_items ?? []) {
+						const normalized = parseFloat(item.rate || '0').toFixed(2);
+						if (normalized !== '0.00') {
+							dryTaxMap.set(normalized, `DRY_RUN_TAX_ID_${normalized}pct`);
+						}
 					}
+
+					const zohoBody = buildZohoInvoiceBody(
+						popPayload, 'DRY_RUN_CONTACT_ID', dryTaxMap,
+						sendEmail, invoiceStatus, defaultPlaceOfSupply, defaultPaymentTermsDays, this, i,
+					);
+
+					if (docType === 'TD04') {
+						const connectedId   = popPayload.data?.connected_invoice_data?.id;
+						const connectedDate = popPayload.data?.connected_invoice_data?.date;
+						if (connectedId)   zohoBody.reference_invoice_id   = connectedId;
+						if (connectedDate) zohoBody.reference_invoice_date = connectedDate;
+					}
+
+					returnData.push({
+						json: {
+							success:       true,
+							status_code:   200,
+							message:       'Dry run: payload validated and mapped successfully. No Zoho API call was made.',
+							dry_run:       true,
+							zoho_endpoint: `POST /${endpoint}`,
+							zoho_body:     zohoBody,
+						},
+						pairedItem: { item: i },
+					});
+
+				} else {
+					const { contactId, contactCreated } = await resolveContact(
+						this, apiBase!, orgHeaderKey!, orgId!, popPayload, createIfMissing, matchStrategy, i,
+					);
+
+					const zohoBody = buildZohoInvoiceBody(
+						popPayload, contactId, taxMap!,
+						sendEmail, invoiceStatus, defaultPlaceOfSupply, defaultPaymentTermsDays, this, i,
+					);
+
+					if (docType === 'TD04') {
+						const connectedId   = popPayload.data?.connected_invoice_data?.id;
+						const connectedDate = popPayload.data?.connected_invoice_data?.date;
+						if (connectedId)   zohoBody.reference_invoice_id   = connectedId;
+						if (connectedDate) zohoBody.reference_invoice_date = connectedDate;
+					}
+
+					const response = await zohoPost(this, apiBase!, orgHeaderKey!, orgId!, endpoint, zohoBody);
+					const doc      = (response.invoice ?? response.creditnote ?? {}) as IDataObject;
+					const docType2 = docType === 'TD04' ? 'creditnote' : 'invoice';
+
+					returnData.push({
+						json: {
+							success:             true,
+							status_code:         200,
+							message:             `${docType2 === 'creditnote' ? 'Credit note' : 'Invoice'} created successfully in Zoho.`,
+							zoho_product:        product,
+							zoho_document_type:  docType2,
+							zoho_invoice_id:     (doc.invoice_id     as string) || (doc.creditnote_id     as string) || null,
+							zoho_invoice_number: (doc.invoice_number as string) || (doc.creditnote_number as string) || null,
+							zoho_status:         doc.status ?? null,
+							zoho_total:          doc.total != null ? Math.round((doc.total as number) * 100) / 100 : null,
+							contact_id:          contactId,
+							contact_created:     contactCreated,
+						},
+						pairedItem: { item: i },
+					});
 				}
-
-				const zohoBody = buildZohoInvoiceBody(
-					popPayload, 'DRY_RUN_CONTACT_ID', dryTaxMap,
-					sendEmail, invoiceStatus, defaultPlaceOfSupply, defaultPaymentTermsDays, this, i,
-				);
-
-				if (docType === 'TD04') {
-					const connectedId   = popPayload.data?.connected_invoice_data?.id;
-					const connectedDate = popPayload.data?.connected_invoice_data?.date;
-					if (connectedId)   zohoBody.reference_invoice_id   = connectedId;
-					if (connectedDate) zohoBody.reference_invoice_date = connectedDate;
+			} catch (itemError: unknown) {
+				if (this.continueOnFail()) {
+					const message = itemError instanceof Error ? itemError.message : 'Unknown error.';
+					returnData.push({
+						json: { success: false, error_code: 'connector_error', message },
+						pairedItem: { item: i },
+					});
+					continue;
 				}
-
-				returnData.push({
-					json: {
-						success:       true,
-						status_code:   200,
-						message:       'Dry run: payload validated and mapped successfully. No Zoho API call was made.',
-						dry_run:       true,
-						zoho_endpoint: `POST /${endpoint}`,
-						zoho_body:     zohoBody,
-					},
-					pairedItem: { item: i },
-				});
-
-			} else {
-				const { contactId, contactCreated } = await resolveContact(
-					this, apiBase!, orgHeaderKey!, orgId!, popPayload, createIfMissing, matchStrategy, i,
-				);
-
-				const zohoBody = buildZohoInvoiceBody(
-					popPayload, contactId, taxMap!,
-					sendEmail, invoiceStatus, defaultPlaceOfSupply, defaultPaymentTermsDays, this, i,
-				);
-
-				if (docType === 'TD04') {
-					const connectedId   = popPayload.data?.connected_invoice_data?.id;
-					const connectedDate = popPayload.data?.connected_invoice_data?.date;
-					if (connectedId)   zohoBody.reference_invoice_id   = connectedId;
-					if (connectedDate) zohoBody.reference_invoice_date = connectedDate;
-				}
-
-				const response = await zohoPost(this, apiBase!, orgHeaderKey!, orgId!, endpoint, zohoBody, i);
-				const doc      = (response.invoice ?? response.creditnote ?? {}) as IDataObject;
-				const docType2 = docType === 'TD04' ? 'creditnote' : 'invoice';
-
-				returnData.push({
-					json: {
-						success:             true,
-						status_code:         200,
-						message:             `${docType2 === 'creditnote' ? 'Credit note' : 'Invoice'} created successfully in Zoho.`,
-						zoho_product:        product,
-						zoho_document_type:  docType2,
-						zoho_invoice_id:     (doc.invoice_id     as string) || (doc.creditnote_id     as string) || null,
-						zoho_invoice_number: (doc.invoice_number as string) || (doc.creditnote_number as string) || null,
-						zoho_status:         doc.status ?? null,
-						zoho_total:          doc.total != null ? Math.round((doc.total as number) * 100) / 100 : null,
-						contact_id:          contactId,
-						contact_created:     contactCreated,
-					},
-					pairedItem: { item: i },
-				});
+				throw itemError;
 			}
 		}
 
@@ -930,6 +938,7 @@ export class PopZohoInvoice implements INodeType {
 
 			return [[{
 				json: { success: false, error_code: errorCode, message },
+				pairedItem: { item: 0 },
 			}]];
 		}
 	}

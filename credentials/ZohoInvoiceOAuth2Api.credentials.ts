@@ -56,7 +56,8 @@ const REGION_OAUTH: Record<string, { auth: string; token: string }> = {
 
 export class ZohoInvoiceOAuth2Api implements ICredentialType {
 	name = 'zohoInvoiceOAuth2Api';
-	displayName = 'Zoho OAuth2 (Invoice / Books)';
+	displayName = 'Zoho Invoice OAuth2 API';
+	icon = 'file:pop-zoho-invoice.svg' as const;
 	documentationUrl = 'https://www.zoho.com/invoice/api/v3/';
 	extends = ['oAuth2Api'];
 
