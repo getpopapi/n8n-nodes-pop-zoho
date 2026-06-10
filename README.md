@@ -482,11 +482,13 @@ npm run dev          # watch mode
 
 ## License
 
-MIT — see [LICENSE](LICENSE.md)
+MIT — Babini Mazzari S.r.l. [LICENSE](LICENSE.md)
 
 ---
 
 ## Related
 
-- [n8n-nodes-pop](https://github.com/getpopapi/n8n-nodes-pop) — POP API node for n8n (FatturaPA, Peppol, VAT validation)
 - [POP API Documentation](https://www.postman.com/getpopapi/pop-api-public-docs)
+- [n8n-nodes-pop](https://github.com/getpopapi/n8n-nodes-pop) — POP API node for n8n (FatturaPA, Peppol, VAT validation)
+- [n8n Community Nodes Guide](https://docs.n8n.io/integrations/community-nodes/)
+- [n8n Creating Nodes](https://docs.n8n.io/integrations/creating-nodes/)
