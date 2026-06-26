@@ -156,6 +156,22 @@ async function zohoPost(
 	return context.helpers.requestWithAuthentication.call(context, 'zohoInvoiceOAuth2Api', options) as Promise<IDataObject>;
 }
 
+async function zohoMarkInvoiceAsSent(
+	context: IExecuteFunctions,
+	apiBase: string,
+	orgHeaderKey: string,
+	orgId: string,
+	invoiceId: string,
+): Promise<IDataObject> {
+	const options: IHttpRequestOptions = {
+		method: 'POST',
+		url: `${apiBase}/invoices/${encodeURIComponent(invoiceId)}/status/sent?organization_id=${orgId}`,
+		headers: { [orgHeaderKey]: orgId },
+		json: true,
+	};
+	return context.helpers.requestWithAuthentication.call(context, 'zohoInvoiceOAuth2Api', options) as Promise<IDataObject>;
+}
+
 // ---------------------------------------------------------------------------
 // HMAC signature verification
 // ---------------------------------------------------------------------------
@@ -876,9 +892,15 @@ export class PopZohoInvoice implements INodeType {
 						if (connectedDate) zohoBody.reference_invoice_date = connectedDate;
 					}
 
-					const response = await zohoPost(this, apiBase!, orgHeaderKey!, orgId!, endpoint, zohoBody);
-					const doc      = (response.invoice ?? response.creditnote ?? {}) as IDataObject;
+					let response = await zohoPost(this, apiBase!, orgHeaderKey!, orgId!, endpoint, zohoBody);
+					let doc      = (response.invoice ?? response.creditnote ?? {}) as IDataObject;
 					const docType2 = docType === 'TD04' ? 'creditnote' : 'invoice';
+
+					if (docType === 'TD01' && invoiceStatus === 'sent' && typeof doc.invoice_id === 'string' && doc.invoice_id) {
+						await zohoMarkInvoiceAsSent(this, apiBase!, orgHeaderKey!, orgId!, doc.invoice_id);
+						response = await zohoGet(this, apiBase!, orgHeaderKey!, orgId!, `invoices/${encodeURIComponent(doc.invoice_id)}`);
+						doc = (response.invoice ?? doc) as IDataObject;
+					}
 
 					returnData.push({
 						json: {
